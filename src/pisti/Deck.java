@@ -28,4 +28,13 @@ public class Deck {
         cardPlace ++;
         return cards.get(cardPlace);
     }
+    
+    // get specified card
+    public Card getCardInDeck(int cardNumber) {
+            return cards.get(cardNumber);
+    }
+    
+    public int getNumCardsLeft() {
+        return 51 - cardPlace;
+    }
 }

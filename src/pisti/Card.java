@@ -13,7 +13,6 @@ public class Card {
     public Card(int cardNumber) {
         String cardNumberStr = String.valueOf(cardNumber);
         String cardFile = "cards/" + cardNumberStr + ".png";
-        System.out.println("card file: " + cardFile);
         cardImage = new ImageView(cardFile);
         rankOfCard = cardNumber % 13;
         suitOfCard = cardNumber / 13;
