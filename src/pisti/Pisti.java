@@ -32,7 +32,7 @@ public class Pisti extends Application {
     private Pane botPistisPane = new Pane();
     private Text txtStartGame = new Text("Select Difficulty to Start Game");
     private Button btEasy = new Button("Easy");
-    private Button btHard = new Button("Hard");
+    private Button btMedium = new Button("Medium");
     private Button btRules = new Button("Game Rules");
     private Image image = new Image("PlayingTable.jpg");
     private ImageView imageView = new ImageView(image);
@@ -53,6 +53,8 @@ public class Pisti extends Application {
     private Label lbBotPistiCapture = new Label("Pistis");
     private Label lbYourScore, lbBotScore;
     private Label lbWinner = new Label("");
+    private boolean userCapturedLast = true;
+    Button btPlayAgain = new Button("Play Again");
     
     @Override
     public void start(Stage primaryStage) {
@@ -73,14 +75,14 @@ public class Pisti extends Application {
         btEasy.setLayoutX(120);
         btEasy.setLayoutY(85);
         btEasy.setStyle("-fx-focus-color: transparent; -fx-faint-focus-color: transparent");
-        btHard.setPrefSize(75, 50);
-        btHard.setLayoutX(220);
-        btHard.setLayoutY(85);
-        btHard.setStyle("-fx-focus-color: transparent; -fx-faint-focus-color: transparent");
+        btMedium.setPrefSize(75, 50);
+        btMedium.setLayoutX(220);
+        btMedium.setLayoutY(85);
+        btMedium.setStyle("-fx-focus-color: transparent; -fx-faint-focus-color: transparent");
         btRules.setLayoutX(160);
         btRules.setLayoutY(155);
         btRules.setStyle("-fx-focus-color: transparent; -fx-faint-focus-color: transparent");
-        playAreaPane.getChildren().addAll(txtStartGame, btEasy, btHard, btRules);
+        playAreaPane.getChildren().addAll(txtStartGame, btEasy, btMedium, btRules);
         mainPane.getChildren().addAll(imageView, playAreaPane);
 
         // rules button handler
@@ -90,16 +92,18 @@ public class Pisti extends Application {
                    "Gameplay:\n"
                    + "Four cards are dealt on the table, three face down and one face up.\n"
                    + "Four cards are dealt to each player.\n"
-                   + "Players take turns playing cards to the center\n"
+                   + "Players take turns playing cards to the center.\n"
                    + "When players run out of cards, four more cards are dealt to each.\n\n"
                    + "Capturing cards:\n"
                    + "The player takes the pile if they play a card that matches the rank of the card on top.\n"
+                   + "The player also takes the pile if they play a Jack.\n"
                    + "If there is only one card in the pile when a player matches the rank, this is called a Pisti.\n"
-                   + "Pistis are placed separately from the players' other captured cards because they are worth more points.\n\n"
+                   + "Pistis are placed separately from the players' other captured cards because they are worth more points.\n"
+                   + "If there are cards remaining in the center when all cards have been played, the player who made the last capture gets them.\n\n"
                    + "Scoring:\n"
-                   + "each non-Jack Pisti: 10 points\n"
-                   + "each Jack Pisti: 20 points\n"
-                   + "each (non-Pisti) 10 J, Q, K, A: 1 point\n"
+                   + "Each non-Jack Pisti: 10 points\n"
+                   + "Each Jack Pisti: 20 points\n"
+                   + "Each 10 J, Q, K, A: 1 point\n"
                    + "2 of Clubs: 2 points\n"
                    + "10 of Diamonds: 3 points\n"
                    + "Player with most cards captured: 3 point bonus\n\n"
@@ -116,14 +120,21 @@ public class Pisti extends Application {
         
         // easy button handler
         btEasy.setOnAction(e -> {
-           startGame("easy");
+            gameLevel = "easy";
+            startGame();
            
         });
         
-        // hard button handler
-        btHard.setOnAction(e -> {
-           startGame("hard");
+        // medium button handler
+        btMedium.setOnAction(e -> {
+            gameLevel = "medium";
+            startGame();
            
+        });
+        
+        btPlayAgain.setOnAction(e -> {
+            mainPane.getChildren().clear();
+           startGame();
         });
         
         Scene scene = new Scene(mainPane);
@@ -132,7 +143,7 @@ public class Pisti extends Application {
         primaryStage.show();
     }
     
-    public void startGame(String gameLevel) {
+    public void startGame() {
         
         // set up board
         playAreaPane.getChildren().clear();
@@ -258,10 +269,14 @@ public class Pisti extends Application {
         centerCardsXOffset += 6;
         userTempCardImage.setY(60);
         playAreaPane.getChildren().add(userTempCardImage);
-        // if match, remove cards from center and add to user's captured piles
+        // if match or J played, remove cards from center and add to user's captured piles
         if (cardsInCenter.size() > 1) {
-            if (cardsInCenter.get(cardsInCenter.size() - 1).getRankOfCard() == cardsInCenter.get(cardsInCenter.size() - 2).getRankOfCard()) {
-                if (cardsInCenter.size() == 2) {
+            if (cardsInCenter.get(cardsInCenter.size() - 1).getRankOfCard() == cardsInCenter.get(cardsInCenter.size() - 2).getRankOfCard() ||
+                    cardsInCenter.get(cardsInCenter.size() - 1).getRankOfCard() == 11) {
+                userCapturedLast = true;
+                // capture pisti
+                if (cardsInCenter.size() == 2 && (cardsInCenter.get(1).getRankOfCard() != 11 || 
+                        (cardsInCenter.get(1).getRankOfCard() == 11 && cardsInCenter.get(0).getRankOfCard() == 11))) {
                     user.addAllToPistiCaptured(cardsInCenter);
                     for (int i = 0; i < 2; i++) {
                         cardsInCenter.get(i).getCardImage().setX(userPistiXOffset);
@@ -271,6 +286,7 @@ public class Pisti extends Application {
                             userPistiXOffset += 2;
                     }
                 }
+                // capture non-pisti
                 else {
                     user.addAllToCardsCaptured(cardsInCenter);
                     for (int i = 0; i < cardsInCenter.size(); i++) {
@@ -293,12 +309,11 @@ public class Pisti extends Application {
         
         // ***bot plays card***
         int cardIndexToPlay = 0;
-        if (cardsInCenter.size() > 0) {
-            for (int i = 1; i < bot.getCardsInHandSize(); i++) 
-                if (bot.getCardInHand(i).getRankOfCard() == cardsInCenter.get(cardsInCenter.size() - 1).getRankOfCard()) {
-                    cardIndexToPlay = i;
-            }
-        }
+        if (gameLevel == "medium")
+            cardIndexToPlay = selectCardMedium();
+        if (gameLevel == "easy")
+            cardIndexToPlay = selectCardEasy();
+        
         //find match between card being played and card in original hand
         for (int i = 0; i < 4; i++) {
             if (bot.getCardInHand(cardIndexToPlay) == botInitialCardsInHand.get(i))
@@ -324,11 +339,14 @@ public class Pisti extends Application {
             if (botCardPlacement[i])
                 botCardPane.getChildren().add(botCardImage);
         }
-        // if match, remove cards from center and add to bot's captured piles
+        // if match or J played, remove cards from center and add to bot's captured piles
         if (cardsInCenter.size() > 1) {
-            if (cardsInCenter.get(cardsInCenter.size() - 1).getRankOfCard() == 
-                    cardsInCenter.get(cardsInCenter.size() - 2).getRankOfCard()) {
-                if (cardsInCenter.size() == 2) {
+            if (cardsInCenter.get(cardsInCenter.size() - 1).getRankOfCard() == cardsInCenter.get(cardsInCenter.size() - 2).getRankOfCard() ||
+                    cardsInCenter.get(cardsInCenter.size() - 1).getRankOfCard() == 11) {
+                userCapturedLast = false;
+                // capture pisti
+                if (cardsInCenter.size() == 2 && (cardsInCenter.get(1).getRankOfCard() != 11 || 
+                        (cardsInCenter.get(1).getRankOfCard() == 11 && cardsInCenter.get(0).getRankOfCard() == 11))) {
                     bot.addAllToPistiCaptured(cardsInCenter);
                     for (int i = 0; i < 2; i++) {
                         cardsInCenter.get(i).getCardImage().setX(botPistiXOffset);
@@ -338,6 +356,7 @@ public class Pisti extends Application {
                             botPistiXOffset += 2;
                     }
                 }
+                // capture non-pisti
                 else {
                     bot.addAllToCardsCaptured(cardsInCenter);
                     for (int i = 0; i < cardsInCenter.size(); i++) {
@@ -359,22 +378,95 @@ public class Pisti extends Application {
         
         // deal if players are out of cards
         if (bot.getCardsInHand().isEmpty()) {
-            if (deck.getNumCardsLeft() > 0)
+            if (deck.getNumCardsLeft() > 0) 
                 dealCards();
         }
         
-        // end game if no cards remain to play
+        // end game if no cards remain to play (none if tie)
         if (bot.getCardsInHand().isEmpty() && deck.getNumCardsLeft() == 0) {
-            calculateScore(bot);
+            // give remaining cards in center to player who captured last
+            if (userCapturedLast)
+                user.addAllToCardsCaptured(cardsInCenter);
+            else
+                bot.addAllToCardsCaptured(cardsInCenter);
+            // calculate base scores
             calculateScore(user);
+            calculateScore(bot);
             // 3 bonus points for most cards captured
             if ((user.getPistiCapturedSize() + user.getCardsCapturedSize()) > 
                     (bot.getPistiCapturedSize() + bot.getCardsCapturedSize()))
                 user.setScore(user.getScore() + 3);
-            else
+            else if ((user.getPistiCapturedSize() + user.getCardsCapturedSize()) < 
+                    (bot.getPistiCapturedSize() + bot.getCardsCapturedSize()))
                 bot.setScore(bot.getScore() + 3);
+                
             endGame();
         }
+    }
+    
+    public int selectCardMedium() {
+        int cardIndexToPlay = 0;
+        // 1. look for match
+        if (cardsInCenter.size() > 0) {
+            for (int i = 1; i < bot.getCardsInHandSize(); i++) 
+                if (bot.getCardInHand(i).getRankOfCard() == cardsInCenter.get(cardsInCenter.size() - 1).getRankOfCard()) {
+                    cardIndexToPlay = i;
+                    return cardIndexToPlay;
+                    
+            }
+        }
+        // 2. See if bot has a Jack
+        boolean hasJack = false;
+        int jackIndex = 0;
+        for (int i = 0; i < bot.getCardsInHandSize(); i++) {
+            if (bot.getCardInHand(i).getRankOfCard() == 11) {
+                hasJack = true;
+                jackIndex = i;
+            }
+        }
+        // 3. If bot has a Jack, play it if has 2 cards and center pile is not empty
+        if (hasJack) {
+            if (bot.getCardsInHandSize() == 2 && !cardsInCenter.isEmpty())
+                return jackIndex;
+        }
+        
+        // 4. If bot has a Jack, play it if center pile contains >= 4 points
+        int centerScore = 0;
+        if (hasJack) {
+            for (int i = 0; i < cardsInCenter.size(); i++) {
+                // 1 point for A or K
+                if (cardsInCenter.get(i).getRankOfCard() == 1 ||
+                       cardsInCenter.get(i).getRankOfCard() == 0 ) 
+                    centerScore++;
+                // 1 point for 10, J, Q, or K
+                if (cardsInCenter.get(i).getRankOfCard() >= 10 &&
+                        cardsInCenter.get(i).getRankOfCard() <= 13) 
+                    centerScore++;
+                // 2 additional points for 10 of diamonds
+                if (cardsInCenter.get(i).getRankOfCard() == 10 &&
+                        cardsInCenter.get(i).getSuitOfCard() == 2) 
+                  centerScore = centerScore + 2;
+                // 2 points for 2 of clubs
+                if (cardsInCenter.get(i).getRankOfCard() == 2 &&
+                        cardsInCenter.get(i).getSuitOfCard() == 3) 
+                   centerScore = centerScore + 2;
+            }
+        }
+        if (centerScore >= 4) 
+            return jackIndex;
+        
+        // 5. If no criteria met, play random card
+        int returnIndex = (int)(Math.random() *  bot.getCardsInHandSize());
+        if (bot.getCardInHand(returnIndex).getRankOfCard() == 11)
+            returnIndex++;
+        if (returnIndex == bot.getCardsInHandSize())
+            returnIndex = 0;
+        return returnIndex;
+    }
+    
+    
+    public int selectCardEasy() {
+        return (int)(Math.random() *  bot.getCardsInHandSize());
     }
     
     public void calculateScore(Player player) {
@@ -385,30 +477,32 @@ public class Pisti extends Application {
             else
                 player.setScore(player.getScore() + 10);
         }
+        
+        // put pisti cards with other cards to be counted again
+        player.addAllToCardsCaptured(player.getPistiCaptured());
 
         // add other captured cards to user's score
         for (int i = 0; i < player.getCardsCapturedSize(); i++) {
-            // 1 point for A
-            if (player.getCardsCaptured().get(i).getRankOfCard() == 1)
+            // 1 point for A or K
+            if (player.getCardsCaptured().get(i).getRankOfCard() == 1 ||
+                   player.getCardsCaptured().get(i).getRankOfCard() == 0 ) 
                 player.setScore(player.getScore() + 1);
             // 1 point for 10, J, Q, or K
             if (player.getCardsCaptured().get(i).getRankOfCard() >= 10 &&
-                    player.getCardsCaptured().get(i).getRankOfCard() <= 13)
-                 player.setScore(player.getScore() + 1);
+                    player.getCardsCaptured().get(i).getRankOfCard() <= 13) 
+                player.setScore(player.getScore() + 1);
             // 2 additional points for 10 of diamonds
             if (player.getCardsCaptured().get(i).getRankOfCard() == 10 &&
-                    player.getCardsCaptured().get(i).getSuitOfCard() == 2)
-                player.setScore(player.getScore() + 2);
+                    player.getCardsCaptured().get(i).getSuitOfCard() == 2) 
+              player.setScore(player.getScore() + 2);
             // 2 points for 2 of clubs
             if (player.getCardsCaptured().get(i).getRankOfCard() == 2 &&
-                    player.getCardsCaptured().get(i).getSuitOfCard() == 3)
-                player.setScore(player.getScore() + 2);
+                    player.getCardsCaptured().get(i).getSuitOfCard() == 3) 
+               player.setScore(player.getScore() + 2);
         }
     }
 
     public void endGame() {
-        System.out.println("your score: " + user.getScore());
-        System.out.println("Opponent's score: " + bot.getScore());
         String yourScore = "Your Score: " + user.getScore();
         lbYourScore = new Label(yourScore);
         String botScore = "Opponent's score: " + bot.getScore();
@@ -432,8 +526,10 @@ public class Pisti extends Application {
         lbWinner.setStyle("-fx-font: 60 arial");
         lbWinner.setTextFill(Color.GREEN);
         lbWinner.setLayoutY(75);
+        btPlayAgain.setLayoutX(270);
+        btPlayAgain.setLayoutY(170);
         playAreaPane.getChildren().clear();
-        playAreaPane.getChildren().addAll(lbWinner, lbYourScore, lbBotScore);
+        playAreaPane.getChildren().addAll(lbWinner, lbYourScore, lbBotScore, btPlayAgain);
     }
     
     /**

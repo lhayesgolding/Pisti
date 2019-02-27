@@ -14,7 +14,7 @@ public class Card {
         String cardNumberStr = String.valueOf(cardNumber);
         String cardFile = "cards/" + cardNumberStr + ".png";
         cardImage = new ImageView(cardFile);
-        rankOfCard = cardNumber % 13;
+        rankOfCard = cardNumber % 13;   // (kings are 0)
         suitOfCard = cardNumber / 13;
         if (cardNumber % 13 == 0)
             suitOfCard -= 1;
