@@ -1,6 +1,9 @@
 package pisti;
 
 import java.util.ArrayList;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javafx.animation.PathTransition;
 import javafx.application.Application;
 import javafx.geometry.Insets;
 import javafx.scene.Group;
@@ -11,8 +14,10 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.Line;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 
 
 public class Pisti extends Application {
@@ -54,7 +59,6 @@ public class Pisti extends Application {
     private Label lbYourScore, lbBotScore;
     private Label lbWinner = new Label("");
     private boolean userCapturedLast = true;
-    Button btPlayAgain = new Button("Play Again");
     
     @Override
     public void start(Stage primaryStage) {
@@ -130,11 +134,6 @@ public class Pisti extends Application {
             gameLevel = "medium";
             startGame();
            
-        });
-        
-        btPlayAgain.setOnAction(e -> {
-            mainPane.getChildren().clear();
-           startGame();
         });
         
         Scene scene = new Scene(mainPane);
@@ -306,7 +305,6 @@ public class Pisti extends Application {
             }
         }
         
-        
         // ***bot plays card***
         int cardIndexToPlay = 0;
         if (gameLevel == "medium")
@@ -329,6 +327,7 @@ public class Pisti extends Application {
         botTempCardImage.setY(60);
         centerCardsXOffset += 6;
         playAreaPane.getChildren().add(botTempCardImage);
+        
         // redo placement of cards in bot's card pane
         int botCardXOffset = 0;
         botCardPane.getChildren().clear();
@@ -382,6 +381,7 @@ public class Pisti extends Application {
                 dealCards();
         }
         
+        
         // end game if no cards remain to play (none if tie)
         if (bot.getCardsInHand().isEmpty() && deck.getNumCardsLeft() == 0) {
             // give remaining cards in center to player who captured last
@@ -406,6 +406,7 @@ public class Pisti extends Application {
     
     public int selectCardMedium() {
         int cardIndexToPlay = 0;
+        
         // 1. look for match
         if (cardsInCenter.size() > 0) {
             for (int i = 1; i < bot.getCardsInHandSize(); i++) 
@@ -415,6 +416,7 @@ public class Pisti extends Application {
                     
             }
         }
+        
         // 2. See if bot has a Jack
         boolean hasJack = false;
         int jackIndex = 0;
@@ -424,6 +426,7 @@ public class Pisti extends Application {
                 jackIndex = i;
             }
         }
+        
         // 3. If bot has a Jack, play it if has 2 cards and center pile is not empty
         if (hasJack) {
             if (bot.getCardsInHandSize() == 2 && !cardsInCenter.isEmpty())
@@ -526,10 +529,8 @@ public class Pisti extends Application {
         lbWinner.setStyle("-fx-font: 60 arial");
         lbWinner.setTextFill(Color.GREEN);
         lbWinner.setLayoutY(75);
-        btPlayAgain.setLayoutX(270);
-        btPlayAgain.setLayoutY(170);
         playAreaPane.getChildren().clear();
-        playAreaPane.getChildren().addAll(lbWinner, lbYourScore, lbBotScore, btPlayAgain);
+        playAreaPane.getChildren().addAll(lbWinner, lbYourScore, lbBotScore);
     }
     
     /**
